@@ -25,7 +25,8 @@ import uk.rgu.data.utilities.Relation;
  */
 public class ApproachesBenchmark {
 
-  static String vectorModelPath = "C:/dev/rgu/word2vec/models/GoogleNews-vectors-negative300.bin.gz";
+//  static String vectorModelPath = "C:/dev/rgu/word2vec/models/GoogleNews-vectors-negative300.bin.gz";
+  static String vectorModelPath = "/program-data/DGXWord2Vec/data/model/wikipedia_plain_model300_min10_iter5_custom_token.txt";
 
   public static void main(String[] arg) {
     VectorOps vectorOps = new VectorOps(vectorModelPath);

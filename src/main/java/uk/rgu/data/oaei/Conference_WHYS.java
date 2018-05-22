@@ -31,8 +31,8 @@ import uk.rgu.data.utilities.Evaluator;
  */
 public class Conference_WHYS {
 
-  static String vectorModelPath = "C:/dev/rgu/word2vec/models/GoogleNews-vectors-negative300.bin.gz";
-//  static String vectorModelPath = "/program-data/DGXWord2Vec/data/model/wikipedia_plain_model300_min10_iter5_custom_token.txt";
+//  static String vectorModelPath = "C:/dev/rgu/word2vec/models/GoogleNews-vectors-negative300.bin.gz";
+  static String vectorModelPath = "/program-data/DGXWord2Vec/data/model/wikipedia_plain_model300_min10_iter5_custom_token.txt";
 //  static String vectorModelPath = "/program-data/DGXWord2Vec/data/model/wikipedia_plain_model300_min5_iter20_custom_token.txt";
 //  static String vectorModelPath = "C:/dev/rgu/word2vec/models/geo_hascontext1_model.txt";
   // Get vectors
@@ -191,17 +191,17 @@ public class Conference_WHYS {
 //      dummyMatch();
 //      generateFeatures(0.5, 1);
 //      weightedHybridSimilarity(0.75, 1, 0.8);
-      System.out.println(whys.weightedHybridSimilarity(0.8, 1, 0.96));
+//      System.out.println(whys.weightedHybridSimilarity(0.8, 1, 0.96));
 //      AlignedConcept.overlap(ApproachesConference.hybrid(vectorOps), hybrid.weightedHybridSimilarity(0.76, 1, 0.89));
-//      Collection results = new ArrayList<>();
-//      results.add("precision,recall,f-measure,threshold,edit_dist_cut");
-//      for (double threshold = 0.75; threshold <= 0.77; threshold+=0.01) {
-//        for (double editDistCut = 0.95; editDistCut <= 0.96; editDistCut+=0.01) {
-//          results.add(hybrid.weightedHybridSimilarity(threshold, 1, editDistCut));
-//        }
-//      }
-//      System.out.println("");
-//      results.forEach(System.out::println);
+      Collection results = new ArrayList<>();
+      results.add("precision,recall,f-measure,threshold,edit_dist_cut");
+      for (double threshold = 0.75; threshold <= 0.77; threshold+=0.01) {
+        for (double editDistCut = 0.95; editDistCut <= 0.96; editDistCut+=0.01) {
+          results.add(whys.weightedHybridSimilarity(threshold, 1, editDistCut));
+        }
+      }
+      System.out.println("");
+      results.forEach(System.out::println);
     } catch (AlignmentException ex) {
       Logger.getLogger(Conference_WHYS.class.getName()).log(Level.SEVERE, null, ex);
     }

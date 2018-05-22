@@ -394,7 +394,7 @@
               <goal>java</goal>
             </goals>
             <configuration>
-              <mainClass>uk.rgu.data.ontologyprocessor.word2vec.TFIDFCalculator</mainClass>
+              <mainClass>uk.rgu.data.oaei.Benchmark_WHYS</mainClass>
             </configuration>
           </execution>
         </executions>

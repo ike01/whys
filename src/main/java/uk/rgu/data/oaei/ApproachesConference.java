@@ -26,13 +26,14 @@ import uk.rgu.data.utilities.Relation;
  * @author 1113938
  */
 public class ApproachesConference {
-  static String vectorModelPath = "C:/dev/rgu/word2vec/models/GoogleNews-vectors-negative300.bin.gz";
+//  static String vectorModelPath = "C:/dev/rgu/word2vec/models/GoogleNews-vectors-negative300.bin.gz";
+  static String vectorModelPath = "/program-data/DGXWord2Vec/data/model/wikipedia_plain_model300_min10_iter5_custom_token.txt";
 
   public static void main(String[] arg) {
-//    VectorOps vectorOps = new VectorOps(vectorModelPath);
+    VectorOps vectorOps = new VectorOps(vectorModelPath);
     try {
 //      AlignedConcept.overlap(isub(), hybrid(vectorOps));
-      wordNet();
+      wordEmb(vectorOps);
 //      isub();
 //      stringEquiv();
     } catch (AlignmentException ex) {
