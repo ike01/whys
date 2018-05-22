@@ -383,8 +383,8 @@ public class VectorOps {
     double sum = 0.0;
 //    editDistCut = 0.05; // threshold for string-based similarity. Value commonly used in OAEI.
 //    double denom = 0;
-//    NormalizedLevenshtein nl = new NormalizedLevenshtein(); // edit distance algo
-    ISub isub = new ISub();
+    NormalizedLevenshtein nl = new NormalizedLevenshtein(); // edit distance algo
+//    ISub isub = new ISub();
     Map<String, Double> longer = s1Map.size() > s2Map.size() ? s1Map : s2Map; // longer string in number of words
     Map<String, Double> shorter = s1Map.equals(longer) ? s2Map : s1Map; // 'shorter' string
 
@@ -398,8 +398,8 @@ public class VectorOps {
         double sim;
         // compute different similarities
         double vecSim = similarity(s1, s2);
-//        double strSim = nl.similarity(s1.trim(), s2.trim());
-        double strSim = isub.score(s1.trim(), s2.trim());
+        double strSim = nl.similarity(s1.trim(), s2.trim());
+//        double strSim = isub.score(s1.trim(), s2.trim());
         if (vecSim >= strSim || strSim < editDistCut) { //  ||  || !s1.substring(0,1).equalsIgnoreCase(s2.substring(0, 1)). string similarity only counts if up to threshold
           System.out.println("vecSim=>" + vecSim  + "(" + s1 + " v " + s2 + ")");
           System.out.println("strSim=>" + strSim  + "(" + s1 + " v " + s2 + ")");

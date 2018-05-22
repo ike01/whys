@@ -195,8 +195,8 @@ public class Conference_WHYS {
 //      AlignedConcept.overlap(ApproachesConference.hybrid(vectorOps), hybrid.weightedHybridSimilarity(0.76, 1, 0.89));
       Collection results = new ArrayList<>();
       results.add("precision,recall,f-measure,threshold,edit_dist_cut");
-      for (double threshold = 0.75; threshold <= 0.77; threshold+=0.01) {
-        for (double editDistCut = 0.95; editDistCut <= 0.96; editDistCut+=0.01) {
+      for (double threshold = 0.7; threshold <= 1.; threshold+=0.01) {
+        for (double editDistCut = 0.7; editDistCut <= 1.; editDistCut+=0.01) {
           results.add(whys.weightedHybridSimilarity(threshold, 1, editDistCut));
         }
       }
