@@ -4,6 +4,19 @@ import edu.cmu.lti.lexical_db.ILexicalDatabase;
 import edu.cmu.lti.lexical_db.NictWordNet;
 import edu.cmu.lti.ws4j.impl.WuPalmer;
 import edu.cmu.lti.ws4j.util.WS4JConfiguration;
+import edu.mit.jwi.Dictionary;
+import edu.mit.jwi.IDictionary;
+import edu.mit.jwi.item.IIndexWord;
+import edu.mit.jwi.item.ISynset;
+import edu.mit.jwi.item.IWord;
+import edu.mit.jwi.item.IWordID;
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -12,12 +25,24 @@ import edu.cmu.lti.ws4j.util.WS4JConfiguration;
 public class WordNetOps {
 
   private static ILexicalDatabase db = new NictWordNet();
+  String wordNetDir = "C:\\Program Files (x86)\\WordNet\\2.1";
+  IDictionary dict;
   WuPalmer wup;
 
-  public WordNetOps() {
+  public WordNetOps(){
     WS4JConfiguration ws4j = WS4JConfiguration.getInstance();
     ws4j.setMFS(true);
     wup = new WuPalmer(db);
+
+    String path = wordNetDir + File.separator + "dict";
+    URL url;
+    try {
+      url = new URL("file", null, path);
+      dict = new Dictionary(url);
+      dict.open();
+    } catch (IOException  ex) {
+      Logger.getLogger(WordNetOps.class.getName()).log(Level.SEVERE, null, ex);
+    }
   }
 
   /**
@@ -73,8 +98,32 @@ public class WordNetOps {
     return sum;
   }
 
+  public Set<String> getSynonyms(String w) {
+    Set<String> lexicon = new HashSet();
+
+    for (edu.mit.jwi.item.POS p : edu.mit.jwi.item.POS.values()) { // loop through parts of speech
+      IIndexWord idxWord = dict.getIndexWord(w, p);
+      if (idxWord != null) {
+//        System.out.println("\t : " + idxWord);
+        IWordID wordID = idxWord.getWordIDs().get(0);
+        IWord word = dict.getWord(wordID);
+        ISynset synset = word.getSynset();
+//        System.out.println(synset.getWords().size());
+        for (IWord iw : synset.getWords()) {
+          lexicon.add(iw.getLemma());
+        }
+      }
+    }
+    return lexicon;
+  }
+
   public static void main(String[] args) {
     WordNetOps wordNetOps = new WordNetOps();
-    System.out.println(wordNetOps.sentenceSimilarity("today", "today"));
+//    System.out.println(wordNetOps.sentenceSimilarity("today", "today"));
+//    System.out.println("===");
+    String s1 = "administrator";
+    wordNetOps.getSynonyms(s1).forEach(c -> {
+      System.out.println("syn : " + c);
+    });
   }
 }

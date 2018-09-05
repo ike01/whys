@@ -110,11 +110,26 @@ public class OntoOps {
     String str = ontClass.getLocalName();
     str = StringUtils.join(StringUtils.splitByCharacterTypeCamelCase(str), ' ');
 
-    str = str.replaceAll("\\s-\\s", "-"); // e.g. reverts "co - author" to "co-author"
-    str = str.replaceAll("\\s_\\s", " ");
+    str = str.replaceAll("\\s*-\\s*", "-"); // e.g. reverts "co - author" to "co-author"
+    str = str.replaceAll("\\s*_\\s*", " ");
     str = str.replaceAll("\\s+", " "); // normalise spaces
 
     return str.trim();
+  }
+
+  public static String getLabel(OntModel ontModel, String uri) {
+    OntClass ontClass = ontModel.getOntClass(uri);
+    String str = null;
+    if (null != ontClass) {
+      str = ontClass.getLocalName();
+      str = StringUtils.join(StringUtils.splitByCharacterTypeCamelCase(str), ' ');
+
+      str = str.replaceAll("\\s*-\\s*", "-"); // e.g. reverts "co - author" to "co-author"
+      str = str.replaceAll("\\s*_\\s*", " ");
+      str = str.replaceAll("\\s+", " "); // normalise spaces
+    }
+
+    return str;
   }
 
   public static Set<String> getLabels(OntClass ontClass) {
@@ -123,8 +138,8 @@ public class OntoOps {
     String str = ontClass.getLocalName();
     str = StringUtils.join(StringUtils.splitByCharacterTypeCamelCase(str), ' ');
 
-    str = str.replaceAll("\\s-\\s", "-"); // e.g. reverts "co - author" to "co-author"
-    str = str.replaceAll("\\s_\\s", " ");
+    str = str.replaceAll("\\s*-\\s*", "-"); // e.g. reverts "co - author" to "co-author"
+    str = str.replaceAll("\\s*_\\s*", " ");
     str = str.replaceAll("\\s+", " "); // normalise spaces
 
     labels.add(str.trim());
@@ -138,8 +153,8 @@ public class OntoOps {
     String str = ontClass.getLocalName();
     str = StringUtils.join(StringUtils.splitByCharacterTypeCamelCase(str), ' ');
 
-    str = str.replaceAll("\\s-\\s", "-"); // e.g. reverts "co - author" to "co-author"
-    str = str.replaceAll("\\s_\\s", " ");
+    str = str.replaceAll("\\s*-\\s*", "-"); // e.g. reverts "co - author" to "co-author"
+    str = str.replaceAll("\\s*_\\s*", " ");
 
     // prepare for lookup in word embedding vocabulary
     str = VectorOps.prepareStringSpaces(str);
@@ -152,9 +167,27 @@ public class OntoOps {
   public static Set<String> getProperties(OntClass ontClass) { // e.g. is_paid_by, is_equipped_by, write, go_through
     Set<String> props = new HashSet<String>();
     ontClass.listDeclaredProperties().forEachRemaining(c -> {
-      props.add(c.getLocalName());
+      String str = c.getLocalName();
+      str = StringUtils.join(StringUtils.splitByCharacterTypeCamelCase(str), ' ');
+
+      str = str.replaceAll("\\s*-\\s*", "-"); // e.g. reverts "co - author" to "co-author"
+      str = str.replaceAll("\\s*_\\s*", " ");
+      str = str.replaceAll("\\s+", " "); // normalise spaces
+
+      props.add(str.trim());
     });
 
+    return props;
+  }
+
+  public static Set<String> getProperties(OntModel ontModel, String uri) { // e.g. is_paid_by, is_equipped_by, write, go_through
+    Set<String> props = new HashSet<String>();
+    OntClass ontClass = ontModel.getOntClass(uri);
+    if (null != ontClass) {
+      ontClass.listDeclaredProperties().forEachRemaining(c -> {
+        props.add(c.getLocalName());
+      });
+    }
     return props;
   }
 
@@ -296,18 +329,18 @@ public class OntoOps {
 //      System.out.println(getLabels(t));
 //    });
 
-//    List<AlignTrainTest> allTestcaseData = Alignment_oaei.generateAlignTrainTest();
-//    for (AlignTrainTest alignTrainTest : allTestcaseData) {
-//      List<OntClass> concepts1 = OntoOps.getOntoClasses(alignTrainTest.sourceOnto.getAbsolutePath());
-//      List<OntClass> concepts2 = OntoOps.getOntoClasses(alignTrainTest.targetOnto.getAbsolutePath());
-//
-//      OntModel sourceModel = OntoOps.getOntologyModel(alignTrainTest.sourceOnto.getAbsolutePath());
-//      OntModel targetModel = OntoOps.getOntologyModel(alignTrainTest.targetOnto.getAbsolutePath());
-//      System.out.println(alignTrainTest.sourceOnto.getAbsolutePath());
-//      concepts2.forEach(c -> {
-//        System.out.println(c.getURI() + " | Depth => " + getRelativeDepthInPath(targetModel, c.getURI()));
-//        getProperties(c).forEach(System.out::println);
-//      });
-//    }
+    List<AlignTrainTest> allTestcaseData = Alignment_oaei.generateConfAlignTrainTest();
+    for (AlignTrainTest alignTrainTest : allTestcaseData) {
+      List<OntClass> concepts1 = OntoOps.getOntoClasses(alignTrainTest.sourceOnto.getAbsolutePath());
+      List<OntClass> concepts2 = OntoOps.getOntoClasses(alignTrainTest.targetOnto.getAbsolutePath());
+
+      OntModel sourceModel = OntoOps.getOntologyModel(alignTrainTest.sourceOnto.getAbsolutePath());
+      OntModel targetModel = OntoOps.getOntologyModel(alignTrainTest.targetOnto.getAbsolutePath());
+      System.out.println(alignTrainTest.sourceOnto.getAbsolutePath());
+      concepts2.forEach(c -> {
+        System.out.println(c.getURI() + " | Depth => " + getRelativeDepthInPath(targetModel, c.getURI()));
+        getProperties(c).forEach(System.out::println);
+      });
+    }
   }
 }

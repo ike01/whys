@@ -20,17 +20,53 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import static java.util.stream.Collectors.joining;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.text.similarity.FuzzyScore;
 import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
 import org.deeplearning4j.models.word2vec.Word2Vec;
 import org.ivml.alimo.ISub;
+import org.simmetrics.StringMetric;
+import org.simmetrics.StringMetrics;
 import uk.rgu.data.model.Concept;
 import uk.rgu.data.model.ConceptCompare;
 import uk.rgu.data.model.StringCompare;
 import uk.rgu.data.model.StringCompare.StringCompareComparator;
 import uk.rgu.data.utilities.StringOps;
+import uk.rgu.data.utilities.WordNetOps;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.joining;
 
 /**
  *
@@ -46,16 +82,19 @@ public class VectorOps {
 //  static String vectorModelPath = "C:/dev/rgu/word2vec/models/geo_hascontext1_model.txt";
 
   static Word2Vec vec;
+  WordNetOps wordNetOps;
 
   public VectorOps() {
     vec = WordVectorSerializer.readWord2VecModel(Paths.get(vectorModelPath).toAbsolutePath().toString());
     System.out.println("Vocabulary size: " + vec.getVocab().numWords());
+    wordNetOps = new WordNetOps();
   }
 
   public VectorOps(String modelFilePath) {
     System.out.println("Loading model from: " + modelFilePath + " ...");
     vec = WordVectorSerializer.readWord2VecModel(Paths.get(modelFilePath).toAbsolutePath().toString());
     System.out.println("Vocabulary size: " + vec.getVocab().numWords());
+    wordNetOps = new WordNetOps();
   }
 
   public void changeModel(String modelFilePath) {
@@ -97,6 +136,23 @@ public class VectorOps {
   }
 
   /**
+   * Returns true if all words in supplied list have vectors and false otherwise.
+   *
+   * @param words
+   * @return
+   */
+  public boolean allHaveVector(Set<String> words) {
+    for (String word : words) {
+      word = prepareStringUnderscores(word); // strip parenthesis and convert to expected form
+      if (!vec.hasWord(word)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
    * Returns true if supplied any of the words in string has a vector and false
    * otherwise.
    *
@@ -116,6 +172,85 @@ public class VectorOps {
   }
 
   /**
+   * Multiples a vector with a scalar.
+   *
+   * @param arr
+   * @param scalar
+   * @return
+   */
+  public static double[] scalarMultiply(double[] arr, double scalar) {
+    for (int i = 0; i < arr.length; i++) {
+      arr[i] = arr[i] * scalar;
+    }
+    return arr;
+  }
+
+  /**
+   * Adds a list of vectors.
+   *
+   * @param arrs
+   * @return
+   */
+  public static double[] addVectors(List<Double[]> arrs) {
+    double[] array = new double[arrs.get(0).length];
+    for (int i = 0; i < array.length; i++) {
+      array[i] = 0.0;
+      for (int j = 0; j < arrs.size(); j++) {
+        array[i] += arrs.get(j)[i];
+      }
+    }
+    return array;
+  }
+
+  /**
+   * Cosine similarity between two vectors.
+   *
+   * @param vectorA
+   * @param vectorB
+   * @return
+   */
+  public static double cosineSimilarity(double[] vectorA, double[] vectorB) {
+    double dotProduct = 0.0;
+    double normA = 0.0;
+    double normB = 0.0;
+    for (int i = 0; i < vectorA.length; i++) {
+      dotProduct += vectorA[i] * vectorB[i];
+      normA += Math.pow(vectorA[i], 2);
+      normB += Math.pow(vectorB[i], 2);
+    }
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+  }
+
+  /**
+    * Find the length of this vector
+   * @param arr
+    * @return the length
+    */
+  public double norm(double[] arr) {
+    double len = 0.0;
+    for (int i = 0; i < arr.length; i++) {
+      len += Math.pow(arr[i], 2);
+    }
+
+    return Math.sqrt(len);
+  }
+
+  /**
+    * Normalise this vector
+   * @param arr
+   * @return
+    */
+  public double[] normalise(double[] arr) {
+    double[] newArr = new double[arr.length];
+    double d = norm(arr);
+    for (int i = 0; i < arr.length; i++) {
+      newArr[i] = arr[i] / d;
+    }
+
+    return newArr;
+  }
+
+  /**
    * Returns the similarity between two word vectors (-1 if any does not have a
    * vector).
    *
@@ -131,7 +266,7 @@ public class VectorOps {
     word1 = prepareStringUnderscores(word1); // strip parenthesis and convert to expected form
     word2 = prepareStringUnderscores(word2); // strip parenthesis and convert to expected form
 
-    if (hasVector(word1) && hasVector(word2)) {
+    if (vec.hasWord(word1) && vec.hasWord(word2)) {
       lst = vec.similarity(word1, word2);
     }
 //    System.out.println("Similarity betweeen " + word1 + " and " + word2 + ": " + lst);
@@ -379,42 +514,53 @@ public class VectorOps {
    */
   public double weightedHybridSimilarity(Map<String, Double> s1Map, Map<String, Double> s2Map, double editDistCut) {
     boolean usedVector = false;
+    double oldRange = 2; // OldMax - OldMin = 1 - -1 = 2
+    double newRange = 1; // NewMax - NewMin = 1 - 0 = 1
 //    double k = 1.5;
     double sum = 0.0;
 //    editDistCut = 0.05; // threshold for string-based similarity. Value commonly used in OAEI.
 //    double denom = 0;
     NormalizedLevenshtein nl = new NormalizedLevenshtein(); // edit distance algo
+//    JaroWinkler jw = new JaroWinkler();
 //    ISub isub = new ISub();
     Map<String, Double> longer = s1Map.size() > s2Map.size() ? s1Map : s2Map; // longer string in number of words
     Map<String, Double> shorter = s1Map.equals(longer) ? s2Map : s1Map; // 'shorter' string
 
     for (Map.Entry<String, Double> entry1 : shorter.entrySet()) { // iterate over shorter
+      String s1 = entry1.getKey().trim();
       double maxSim = 0.0; // track maximum similarity. (NOTE: without removal, a string can count multiple times in max sim)
       double w1 = 0;
       double w2 = 0;
+//      Set<String> s1Synonyms = wordNetOps.getSynonyms(s1);
       for (Map.Entry<String, Double> entry2 : longer.entrySet()) { // inner: iterate over longer string
-        String s1 = entry1.getKey();
-        String s2 = entry2.getKey();
         double sim;
-        // compute different similarities
-        double vecSim = similarity(s1, s2);
-        double strSim = nl.similarity(s1.trim(), s2.trim());
-//        double strSim = isub.score(s1.trim(), s2.trim());
-        if (vecSim >= strSim || strSim < editDistCut) { //  ||  || !s1.substring(0,1).equalsIgnoreCase(s2.substring(0, 1)). string similarity only counts if up to threshold
-          System.out.println("vecSim=>" + vecSim  + "(" + s1 + " v " + s2 + ")");
-          System.out.println("strSim=>" + strSim  + "(" + s1 + " v " + s2 + ")");
-          sim = vecSim;
-          usedVector = true;
-//          System.out.println("semantic: " + s1 + " vs " + s2 + "| strSim=" + strSim + " | vecSim=" + vecSim);
-        } else {
-          sim = strSim;
-        }
+        String s2 = entry2.getKey().trim();
+//        s1Synonyms.retainAll(wordNetOps.getSynonyms(s2)); // retain common
+//        if (!s1Synonyms.isEmpty()) {
+//          sim = 1.0; // maximum similarity for having common synonyms
+//        } else {
+          // compute different similarities
+          double vecSim = similarity(s1, s2); // range: 1 to -1
+//          vecSim = ((vecSim + 1) * newRange) / oldRange; //change to (1,0) interval | (((OldValue - OldMin) * NewRange) / OldRange) + NewMin
+          double strSim = nl.similarity(s1.trim(), s2.trim());
+//          double strSim = jw.similarity(s1.trim(), s2.trim());
+  //        double strSim = isub.score(s1.trim(), s2.trim());
+          if (vecSim >= strSim || strSim < editDistCut) { //  ||  || !s1.substring(0,1).equalsIgnoreCase(s2.substring(0, 1)). string similarity only counts if up to threshold
+//            System.out.println("vecSim=>" + vecSim  + "(" + s1 + " v " + s2 + ")");
+//            System.out.println("strSim=>" + strSim  + "(" + s1 + " v " + s2 + ")");
+            sim = vecSim;
+            usedVector = true;
+  //          System.out.println("semantic: " + s1 + " vs " + s2 + "| strSim=" + strSim + " | vecSim=" + vecSim);
+          } else {
+            sim = strSim;
+          }
+//        }
         // check if better than max
         if (sim > maxSim) {
           maxSim = sim;
           w1 = entry1.getValue();
           w2 = entry2.getValue();
-          System.out.println("s1="+s1+",w1="+w1+",s2="+s2+",w2="+w2);
+//          System.out.println("s1="+s1+",w1="+w1+",s2="+s2+",w2="+w2);
         } // end if
       } // end inner for
       sum += (maxSim * w1 * w2);
@@ -423,16 +569,99 @@ public class VectorOps {
 //      denom += (w1 * w2);
     } // end outer for
 
-    if (usedVector && sum >=  0.76) {
-      s1Map.keySet().forEach(System.out::print);
-      System.out.print(" <=> ");
-      s2Map.keySet().forEach(System.out::print);
-      System.out.print(" | sim = " + sum);
-      System.out.println("");
-    }
+//    if (usedVector && sum >=  0.76) {
+//      s1Map.keySet().forEach(System.out::print);
+//      System.out.print(" <=> ");
+//      s2Map.keySet().forEach(System.out::print);
+//      System.out.print(" | sim = " + sum);
+//      System.out.println("");
+//    }
 
     return sum;
   }
+
+  public double weightedVectorSimilarity(Map<String, Double> s1Map, Map<String, Double> s2Map, double editDistCut) {
+    boolean usedVector = false;
+    double oldRange = 2; // OldMax - OldMin = 1 - -1 = 2
+    double newRange = 1; // NewMax - NewMin = 1 - 0 = 1
+//    double k = 1.5;
+    NormalizedLevenshtein nl = new NormalizedLevenshtein(); // edit distance algo
+//    ISub isub = new ISub();
+//    JaroWinkler jw = new JaroWinkler();
+//    MetricLCS mlcs = new MetricLCS();
+//    FuzzyScore fs = new FuzzyScore(Locale.ENGLISH);
+//    StringMetric metric = StringMetrics.mongeElkan();
+
+//    Map<String, Double> longer = s1Map.size() > s2Map.size() ? s1Map : s2Map; // longer string in number of words
+//    Map<String, Double> shorter = s1Map.equals(longer) ? s2Map : s1Map; // 'shorter' string
+
+    // vector similarity
+    double vecSim = 0.0;
+    if (allHaveVector(s1Map.keySet()) && allHaveVector(s2Map.keySet())) { // all words being compared have vectors
+      System.out.println("allHaveVector");
+      // get weighted vector for first string
+      List<Double[]> list1 = new ArrayList();
+      for (Map.Entry<String, Double> entry1 : s1Map.entrySet()) {
+        String w1 = entry1.getKey();
+        double tfidf1 = entry1.getValue();
+        w1 = prepareStringUnderscores(w1);
+        double[] v1 = vec.getWordVector(w1);
+        list1.add(ArrayUtils.toObject(scalarMultiply(Arrays.copyOf(v1, v1.length), tfidf1)));
+      }
+      // get weighted vector for second string
+      List<Double[]> list2 = new ArrayList();
+      for (Map.Entry<String, Double> entry2 : s2Map.entrySet()) {
+        String w2 = entry2.getKey();
+        double tfidf2 = entry2.getValue();
+        w2 = prepareStringUnderscores(w2);
+        double[] v2 = vec.getWordVector(w2);
+        list2.add(ArrayUtils.toObject(scalarMultiply(Arrays.copyOf(v2, v2.length), tfidf2)));
+      }
+      double[] vec1 = addVectors(list1); // add weighted vectors of words in first string
+      double[] vec2 = addVectors(list2); // add weighted vectors of words in second string
+      vecSim = cosineSimilarity(normalise(vec1), normalise(vec2)); // get cosine similarity
+//      vecSim = ((vecSim + 1) * newRange) / oldRange; //change to (1,0) interval | (((OldValue - OldMin) * NewRange) / OldRange) + NewMin
+    }
+
+    // string similarity
+    String s1 = s1Map.keySet().stream().map(String::valueOf).collect(joining(" "));
+    String s2 = s2Map.keySet().stream().map(String::valueOf).collect(joining(" "));
+    double strSim = nl.similarity(s1.trim(), s2.trim());
+
+//    double nlSim = nl.similarity(s1.trim(), s2.trim());
+//    double isubSim = isub.score(s1.trim(), s2.trim());
+//    double strSim = isubSim;
+//    double jwSim = jw.similarity(s1.trim(), s2.trim());
+//    double mlcsSim = (1 - mlcs.distance(s1.trim(), s2.trim()));
+//    String longer = s1.trim().length() > s2.trim().length() ? s1.trim() : s2.trim();
+//    double fsScore = (double) fs.fuzzyScore(s1.trim(), s2.trim()) / fs.fuzzyScore(longer, longer);
+//    double metricScore = metric.compare(s1.trim().toLowerCase(), s2.trim().toLowerCase());
+//
+//    double strSim = Math.max(metricScore, Math.max(fsScore, Math.max(mlcsSim, Math.max(jwSim, Math.max(nlSim, isubSim)))));
+
+    double sim;
+    if (vecSim >= strSim || strSim < editDistCut) { //  ||  || !s1.substring(0,1).equalsIgnoreCase(s2.substring(0, 1)). string similarity only counts if up to threshold
+      System.out.println("vecSim=>" + vecSim  + "(" + s1 + " v " + s2 + ")");
+      System.out.println("strSim=>" + strSim  + "(" + s1 + " v " + s2 + ")");
+      sim = vecSim;
+      usedVector = true;
+//          System.out.println("semantic: " + s1 + " vs " + s2 + "| strSim=" + strSim + " | vecSim=" + vecSim);
+    } else {
+      sim = strSim;
+    }
+
+    if (usedVector && sim >=  0.7) {
+      System.out.print(s1);
+      System.out.print(" <=> ");
+      System.out.print(s2);
+      System.out.print(" | sim = " + sim);
+      System.out.println("");
+    }
+
+    return sim;
+  }
+
+
 
   public double weightedHybridSimilarityImproved(Map<String, Double> s1Map, Map<String, Double> s2Map) {
     List<StringCompare> seen = new ArrayList<>();
@@ -532,7 +761,32 @@ public class VectorOps {
         Map<String, Double> s1Map = TFIDF.normalise(TFIDF.weighStringTerms(s1.toLowerCase(), coll1));
         Map<String, Double> s2Map = TFIDF.normalise(TFIDF.weighStringTerms(s2.toLowerCase(), coll2));
 //        double sim = similarity(word, str);
-        double sim = weightedHybridSimilarity(s1Map, s2Map, editDistCut);
+        double sim = weightedHybridSimilarity(s1Map, s2Map, editDistCut); // hybrid sim
+//        double sim = weightedHybridSimilarityImproved(s1Map, s2Map);
+//        System.out.println(s1 + " vs " + s2 + " = " + sim);
+        if (sim > lst) { // update overall best
+          lst = sim; // update maximum
+        }
+      } // end inner for
+    }
+
+    return lst;
+  }
+
+  public double maxWeightedVectorSimilarity(Set<String> wordList1, List<List<String>> coll1, Set<String> wordList2, List<List<String>> coll2, double editDistCut) {
+    double lst = 0.0; // current maximum
+//    for (String s1 : wordList1)
+//      Map<String, Double> wordMap1 = TFIDFCalculator.weighStringTerms(s1.toLowerCase(), coll1);
+    for (String s1 : wordList1) {
+      for (String s2 : wordList2) { // compute similarity
+        if (null == s1 || null == s2) {
+          continue;
+        }
+
+        Map<String, Double> s1Map = TFIDF.normalise(TFIDF.weighStringTerms(s1.toLowerCase(), coll1));
+        Map<String, Double> s2Map = TFIDF.normalise(TFIDF.weighStringTerms(s2.toLowerCase(), coll2));
+//        double sim = similarity(word, str);
+        double sim = weightedVectorSimilarity(s1Map, s2Map, editDistCut);
 //        double sim = weightedHybridSimilarityImproved(s1Map, s2Map);
 //        System.out.println(s1 + " vs " + s2 + " = " + sim);
         if (sim > lst) {

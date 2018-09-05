@@ -26,14 +26,14 @@ import uk.rgu.data.utilities.Relation;
  * @author 1113938
  */
 public class ApproachesConference {
-//  static String vectorModelPath = "C:/dev/rgu/word2vec/models/GoogleNews-vectors-negative300.bin.gz";
-  static String vectorModelPath = "/program-data/DGXWord2Vec/data/model/wikipedia_plain_model300_min10_iter5_custom_token.txt";
+  static String vectorModelPath = "C:/dev/rgu/word2vec/models/GoogleNews-vectors-negative300.bin.gz";
+//  static String vectorModelPath = "/program-data/DGXWord2Vec/data/model/wikipedia_plain_model300_min10_iter5_custom_token.txt";
 
   public static void main(String[] arg) {
     VectorOps vectorOps = new VectorOps(vectorModelPath);
     try {
-//      AlignedConcept.overlap(isub(), hybrid(vectorOps));
-      wordEmb(vectorOps);
+      AlignedConcept.overlap(hybrid(vectorOps), wordNet());
+//      wordEmb(vectorOps);
 //      isub();
 //      stringEquiv();
     } catch (AlignmentException ex) {
@@ -225,9 +225,9 @@ a1.forEach(a -> {
     System.out.println("\n===WordNet===");
     List<AlignTrainTest> allTestcaseData = Alignment_oaei.generateConfAlignTrainTest();
 
-    double start = .8;
+    double t = .96;
 
-    for (double t = start; t <= 1.0; t += 0.01) {
+//    for (double t = start; t <= 1.0; t += 0.01) {
       Properties params = new BasicParameters();
       List<Integer> found = new ArrayList();
       List<Integer> correct = new ArrayList();
@@ -243,9 +243,9 @@ a1.forEach(a -> {
 //        params.setProperty("threshold", Double.toString(t));
         a1.align((Alignment) null, params);
         a1.cut(t);
-//a1.forEach(a -> {
-//  alignments.add(new AlignedConcept(a.getObject1().toString().replaceAll("<", "").replaceAll(">", ""), a.getObject2().toString().replaceAll("<", "").replaceAll(">", ""), Relation.Predicate.EXACT_MATCH.value));
-//});
+a1.forEach(a -> {
+  alignments.add(new AlignedConcept(a.getObject1().toString().replaceAll("<", "").replaceAll(">", ""), a.getObject2().toString().replaceAll("<", "").replaceAll(">", ""), Relation.Predicate.EXACT_MATCH.value));
+});
         // Load the reference alignment
         AlignmentParser aparser = new AlignmentParser(0);
         Alignment reference = aparser.parse(alignTrainTest.referenceAlignment.toPath().toUri());
@@ -275,7 +275,7 @@ a1.forEach(a -> {
       double f1 = 2 * precision * recall / (precision + recall);
 
       System.out.println("Threshold = " + t + " H(p) = " + precision + " H(r) = " + recall + " H(fm) = " + f1);
-    }
+//    }
 
     return alignments;
   }

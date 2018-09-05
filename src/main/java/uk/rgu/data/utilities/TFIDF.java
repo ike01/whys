@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import uk.rgu.data.oaei.OntoOps;
 
 /**
@@ -22,14 +23,13 @@ public class TFIDF {
    * @param term String represents a term
    * @return term frequency of term in document
    */
-  public static double tf(List<String> doc, String term) {
+  public static double tfRaw(List<String> doc, String term) {
     double result = 0;
     for (String word : doc) {
       if (term.equalsIgnoreCase(word)) {
         result++;
       }
     }
-//    return (double) result / (doc.size());
     return (double) result; // mostly 0 or 1
   }
 
@@ -39,7 +39,7 @@ public class TFIDF {
    * @param term String represents a term
    * @return term frequency of term in document
    */
-  public static double tf2(List<String> doc, String term) {
+  public static double tfLenAdjusted(List<String> doc, String term) {
     double result = 0;
     for (String word : doc) {
       if (term.equalsIgnoreCase(word)) {
@@ -74,7 +74,7 @@ public class TFIDF {
    * @param term String represents a term
    * @return the inverse term frequency of term in documents
    */
-  public static double idf2(List<List<String>> docs, String term) {
+  public static double idfSmooth(List<List<String>> docs, String term) {
     double n = 0;
     for (List<String> doc : docs) {
       for (String word : doc) {
@@ -94,7 +94,7 @@ public class TFIDF {
    * @return the TF-IDF of term
    */
   public static double tfIdf(List<String> doc, List<List<String>> docs, String term) {
-    double tf = tf(doc, term);
+    double tf = tfRaw(doc, term);
     double idf = idf(docs, term);
     return tf * idf;
   }
@@ -106,8 +106,8 @@ public class TFIDF {
    * @return the TF-IDF of term
    */
   public static double tfIdf2(List<String> doc, List<List<String>> docs, String term) {
-    double tf = tf2(doc, term);
-    double idf = idf2(docs, term);
+    double tf = tfLenAdjusted(doc, term);
+    double idf = idfSmooth(docs, term);
     return tf * idf;
   }
 
@@ -140,7 +140,31 @@ public class TFIDF {
 
   public static Map<String, Double> weighStringTerms(String s, List<List<String>> coll) {
     Map<String, Double> v = new HashMap<>();
-    List<String> doc = Arrays.asList(s.split("\\s+"));
+    List<String> doc = new ArrayList();
+    for (String l : Arrays.asList(s.split("\\s+"))) {
+      if (!Pattern.matches("\\p{Punct}", l.trim())) { // pattern matches !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~
+        doc.add(l.trim());
+      }
+    }
+    for (String t : doc) {
+      double w = tfIdf(doc, coll, t);
+//      System.out.println("Weight of " + t + " => " + w);
+      v.put(t, w);
+    }
+
+    return v;
+  }
+
+  public static Map<String, Double> weighStringTerms(Set<String> strSet, List<List<String>> coll) {
+    Map<String, Double> v = new HashMap<>();
+    List<String> doc = new ArrayList();
+    for (String s : strSet) {
+      for (String l : Arrays.asList(s.split("\\s+"))) {
+        if (!Pattern.matches("\\p{Punct}", l.trim())) { // pattern matches !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~
+          doc.add(l.trim());
+        }
+      }
+    }
     for (String t : doc) {
       double w = tfIdf(doc, coll, t);
 //      System.out.println("Weight of " + t + " => " + w);
@@ -174,12 +198,13 @@ public class TFIDF {
    * Collection is the list of all documents.
    *
    * @param concepts
+   * @param removeStopwords
    * @return
    */
-  public static List<List<String>> getCollection(List<OntClass> concepts) {
+  public static List<List<String>> getCollection(List<OntClass> concepts, boolean removeStopwords) {
     List<List<String>> coll = new ArrayList<>();
     for (OntClass c : concepts) {
-      coll.add(getDocument(c));
+      coll.add(getDocument(c, removeStopwords));
     }
 
     return coll;
@@ -190,12 +215,65 @@ public class TFIDF {
    * document (case insensitive).
    *
    * @param concept
+   * @param removeStopwords
    * @return
    */
-  public static List<String> getDocument(OntClass concept) {
+  public static List<String> getDocument(OntClass concept, boolean removeStopwords) {
     List<String> doc = new ArrayList<>();
     for (String s : OntoOps.getLabels(concept)) {
-      doc.addAll(Arrays.asList(s.toLowerCase().split("\\s+"))); // add all words in labels of a concept to document
+      for(String w : s.toLowerCase().split("\\s+")) { // add all words in labels of a concept to document
+        if (removeStopwords) { // if removing stopwords
+          if (!StopWords.MYSQL_STOP_WORDS.contains(w)) { // add to list if not a stopword
+            doc.add(w);
+          }
+        } else{
+          doc.add(w);
+        }
+
+      }
+    }
+
+    return doc;
+  }
+
+  /**
+   * Generates collection of concept properties. The words in properties of a concept forms a document.
+   * Collection is the list of all documents.
+   *
+   * @param concepts
+   * @param removeStopwords
+   * @return
+   */
+  public static List<List<String>> getPropertiesCollection(List<OntClass> concepts, boolean removeStopwords) {
+    List<List<String>> coll = new ArrayList<>();
+    for (OntClass c : concepts) {
+      coll.add(getPropertiesDocument(c, removeStopwords));
+    }
+
+    return coll;
+  }
+
+  /**
+   * Generates a concept's properties document. The words in properties of a concept forms its
+   * document (case insensitive).
+   *
+   * @param concept
+   * @param removeStopwords
+   * @return
+   */
+  public static List<String> getPropertiesDocument(OntClass concept, boolean removeStopwords) {
+    List<String> doc = new ArrayList<>();
+    for (String s : OntoOps.getProperties(concept)) {
+      for(String w : s.toLowerCase().split("\\s+")) { // add all words in labels of a concept to document
+        if (removeStopwords) { // if removing stopwords
+          if (!StopWords.MYSQL_STOP_WORDS.contains(w)) { // add to list if not a stopword
+            doc.add(w);
+          }
+        } else{
+          doc.add(w);
+        }
+
+      }
     }
 
     return doc;

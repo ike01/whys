@@ -11,6 +11,7 @@ public class RecommendedConcept extends Concept {
 
   private double score;
   public int matchType; // 1=hybrid, 2=stoilos, 3=context
+  public double contextSim;
 
   public RecommendedConcept() {
   }

@@ -84,8 +84,8 @@ public class Benchmark_WHYS {
 //        if (t < 7.1) {
 //          concepts2.forEach(c -> System.out.println(OntoOps.getLabels(c)));
 //        }
-      List<List<String>> collection1 = TFIDF.getCollection(concepts1);
-      List<List<String>> collection2 = TFIDF.getCollection(concepts2);
+      List<List<String>> collection1 = TFIDF.getCollection(concepts1, false);
+      List<List<String>> collection2 = TFIDF.getCollection(concepts2, false);
 
       // collection similarity
 //      double collectionSim = compareCollection(collection1, collection2);
