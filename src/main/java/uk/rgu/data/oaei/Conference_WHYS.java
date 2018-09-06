@@ -29,6 +29,7 @@ import uk.rgu.data.utilities.Relation;
 import uk.rgu.data.utilities.TFIDF;
 import uk.rgu.data.ontologyprocessor.word2vec.VectorOps;
 import uk.rgu.data.utilities.Evaluator;
+import uk.rgu.data.utilities.FileOps;
 
 /**
  *
@@ -37,7 +38,8 @@ import uk.rgu.data.utilities.Evaluator;
 public class Conference_WHYS {
 
 //  static String vectorModelPath = "C:/dev/rgu/word2vec/models/GoogleNews-vectors-negative300.bin.gz";
-  static String vectorModelPath = "/program-data/DGXWord2Vec/data/model/wikipedia_plain_model300_min10_iter5_custom_token.txt";
+  static String vectorModelPath = "/program-data/DGXWord2Vec/data/model/GoogleNews-vectors-negative300.bin.gz";
+//  static String vectorModelPath = "/program-data/DGXWord2Vec/data/model/wikipedia_plain_model300_min10_iter5_custom_token.txt";
 //  static String vectorModelPath = "/program-data/DGXWord2Vec/data/model/wikipedia_plain_model300_min5_iter20_custom_token.txt";
 //  static String vectorModelPath = "C:/dev/rgu/word2vec/models/geo_hascontext1_model.txt";
   // Get vectors
@@ -617,19 +619,20 @@ alignments = PreAlignedConcept.getAlignments(alignmentsInThreshold);
 
   public static void main(String[] args) {
     VectorOps vectorOps = new VectorOps(vectorModelPath);
+//    vectorOps.loadWordVectors("C:/dev/rgu/word2vec/models/glove.6B.50d.txt");
     Conference_WHYS whys = new Conference_WHYS(vectorOps);
     try {
 //      dummyMatch();
 //      generateFeatures(0.5, 1);
-      whys.weightedHybridSimilarity(0.76, 2, 0.85);
+//      whys.weightedHybridSimilarity(0.76, 2, 0.85);
 //      System.out.println(whys.weightedHybridSimilarity(0.76, 1, 0.89));
 //      whys.weightedVectorAddition(0.77, 2, 0.85);
 //      AlignedConcept.overlap(ApproachesConference.wordNet(), whys.weightedHybridSimilarity(0.76, 1, 0.89));
-/*
+///*
       Collection results = new ArrayList<>();
       results.add("precision,recall,f-measure,threshold,edit_dist_cut");
-      for (double threshold = 0.7; threshold <= .9; threshold+=0.01) {
-        for (double editDistCut = 0.85; editDistCut <= .9; editDistCut+=0.01) {
+      for (double threshold = 0.1; threshold <= .99; threshold+=0.01) {
+        for (double editDistCut = 0.1; editDistCut <= .99; editDistCut+=0.01) {
           String res = whys.weightedHybridSimilarity(threshold, 2, editDistCut);
 //          String res = whys.weightedVectorAddition(threshold, 2, editDistCut);
           results.add(res);
@@ -638,7 +641,9 @@ alignments = PreAlignedConcept.getAlignments(alignmentsInThreshold);
       }
       System.out.println("\n===COMPLETE===\n");
       results.forEach(System.out::println);
-*/
+      // write to csv
+      FileOps.printResults(results, "conf_para_grid.csv");
+//*/
     } catch (AlignmentException ex) {
       Logger.getLogger(Conference_WHYS.class.getName()).log(Level.SEVERE, null, ex);
     }

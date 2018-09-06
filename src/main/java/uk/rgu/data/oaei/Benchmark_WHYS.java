@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.io.FilenameUtils;
@@ -18,6 +19,7 @@ import org.semanticweb.owl.align.AlignmentException;
 import org.semanticweb.owl.align.Cell;
 import uk.rgu.data.model.AlignedConcept;
 import uk.rgu.data.model.Concept;
+import uk.rgu.data.model.PreAlignedConcept;
 import uk.rgu.data.model.RecommendedConcept;
 import uk.rgu.data.utilities.Relation;
 import uk.rgu.data.ontologyprocessor.word2vec.VectorOps;
@@ -32,7 +34,8 @@ import uk.rgu.data.utilities.TFIDF;
 public class Benchmark_WHYS {
 
 //  static String vectorModelPath = "C:/dev/rgu/word2vec/models/GoogleNews-vectors-negative300.bin.gz";
-  static String vectorModelPath = "/program-data/DGXWord2Vec/data/model/wikipedia_plain_model300_min10_iter5_custom_token.txt";
+  static String vectorModelPath = "/program-data/DGXWord2Vec/data/model/GoogleNews-vectors-negative300.bin.gz";
+//  static String vectorModelPath = "/program-data/DGXWord2Vec/data/model/wikipedia_plain_model300_min10_iter5_custom_token.txt";
 //  static String vectorModelPath = "/program-data/DGXWord2Vec/data/model/wikipedia_plain_model300_min5_iter20_custom_token.txt";
 //  static String vectorModelPath = "C:/dev/rgu/word2vec/models/geo_hascontext1_model.txt";
   // Get vectors
@@ -43,6 +46,7 @@ public class Benchmark_WHYS {
     this.vectorOps = vectorOps;
   }
 
+  //  =================== APPROACH WHS ================================
   /**
    * Weighted hybrid similarity
    *
@@ -71,6 +75,7 @@ public class Benchmark_WHYS {
 
 //      for (int counter = 1; counter <= 4; counter++) {
     for (AlignTrainTest alignTrainTest : allTestcaseData) {
+      List<PreAlignedConcept> alignmentsInThreshold = new ArrayList<PreAlignedConcept>();
       int total = 0;
       int correctFound = 0;
 //        File targetOnto = new File(ontoBase + "30" + counter + "_onto.rdf");
@@ -129,25 +134,30 @@ public class Benchmark_WHYS {
         }
       } // concept1 loop ends
 
-      // Evaluate
+      // Filter
       for (Map.Entry<Concept, ArrayList<RecommendedConcept>> entry : candidateAlignments.entrySet()) {
         Concept c1 = entry.getKey();
         ArrayList<RecommendedConcept> selectedConcepts = entry.getValue();
+
         for (int i = 0; i < selectedConcepts.size(); i++) {
           RecommendedConcept c2 = selectedConcepts.get(i);
           AlignedConcept alignedConcept = new AlignedConcept(c1.getId(), c2.getId(), Relation.Predicate.EXACT_MATCH.value);
-          if (c2.getScore() >= threshold && !AlignedConcept.containsTheAlignment(seenAlignmentList, alignedConcept)) { // continue if similarity is up to threshold and alignment is not selected already
-            seenAlignmentList.add(alignedConcept); // add new to list
-alignments.add(new AlignedConcept(c1.getId(), c2.getId(), Relation.Predicate.EXACT_MATCH.value));
-            String classLabel = "N";
-            total++;
-            if (Evaluator.trueAlignment(groundTruth, alignedConcept)) { // check if present in the reference alignment
-              correctFound++;
-              classLabel = "Y";
-            }
-            out.add(c1.getLabel() + " vs " + c2.getLabel() + " = " + c2.getScore() + " => " + classLabel);
-          } // end if unseen alignment and above similarity threshold
+          PreAlignedConcept pac = new PreAlignedConcept(alignedConcept, c2.getScore());
+          alignmentsInThreshold = PreAlignedConcept.updateAlignments(alignmentsInThreshold, pac);
         }
+      }
+
+      // Evaluate
+      alignments = PreAlignedConcept.getAlignments(alignmentsInThreshold);
+//  alignments.add(new AlignedConcept(c1.getId(), c2.getId(), Relation.Predicate.EXACT_MATCH.value));
+      for (AlignedConcept alignedConcept : alignments) {
+        String classLabel = "N";
+        total++;
+        if (Evaluator.trueAlignment(groundTruth, alignedConcept)) { // check if present in the reference alignment
+          correctFound++;
+          classLabel = "Y";
+        }
+//            out.add(c1.getLabel() + " vs " + c2.getLabel() + " = " + c2.getScore() + " => " + classLabel);
       }
       found.add(total);
       correct.add(correctFound);
@@ -162,6 +172,120 @@ alignments.add(new AlignedConcept(c1.getId(), c2.getId(), Relation.Predicate.EXA
     System.out.println("H(p) = " + precision + " H(r) = " + recall + " H(fm) = " + f1 + " , threshold = " + threshold + " , edit_cut = " + editDistCut);
 
     return precision + "," + recall + "," + f1 + "," + threshold + "," + editDistCut;
+  }
+
+//  =================== APPROACH WVS ================================
+  public String weightedVectorAddition(double threshold, int maxN, double editDistCut) throws AlignmentException { // AlignedConcept alignedConcept,
+    List<AlignedConcept> alignments = new ArrayList<>();
+    Collection out = new ArrayList(); // for csv output
+    List<AlignTrainTest> allTestcaseData = Alignment_oaei.generateBencAlignTrainTest();
+    List<AlignedConcept> seenAlignmentList = new ArrayList<>(); // overall list of alignments returned
+    // counts for evaluation
+    List<Integer> found = new ArrayList();
+    List<Integer> correct = new ArrayList();
+    List<Integer> expected = new ArrayList();
+
+    System.out.println("current : " + threshold);
+
+    for (AlignTrainTest alignTrainTest : allTestcaseData) {
+      List<PreAlignedConcept> alignmentsInThreshold = new ArrayList<PreAlignedConcept>();
+      int total = 0;
+      int correctFound = 0;
+
+      String sourceScheme = FilenameUtils.removeExtension(alignTrainTest.sourceOnto.getName()).split("_")[0];
+      String targetScheme = FilenameUtils.removeExtension(alignTrainTest.targetOnto.getName()).split("_")[0];
+      List<OntClass> concepts1 = OntoOps.getOntoClasses(alignTrainTest.sourceOnto.getAbsolutePath()); // source ontology concepts
+      List<OntClass> concepts2 = OntoOps.getOntoClasses(alignTrainTest.targetOnto.getAbsolutePath()); // target ontology concepts
+
+      List<List<String>> collection1 = TFIDF.getCollection(concepts1, false); // source ontology collection
+      List<List<String>> collection2 = TFIDF.getCollection(concepts2, false); // target ontology collection
+
+      // ground truth
+      AlignmentParser aparser = new AlignmentParser(0);
+      Alignment reference = aparser.parse(alignTrainTest.referenceAlignment.toPath().toUri());
+      List<AlignedConcept> groundTruth = new ArrayList();
+      for (Iterator<Cell> iterator = reference.iterator(); iterator.hasNext();) {
+        Cell cell = iterator.next();
+        groundTruth.add(new AlignedConcept(cell.getObject1AsURI().toString(), cell.getObject2AsURI().toString(), Relation.Predicate.EXACT_MATCH.value));
+      }
+
+      Map<Concept, ArrayList<RecommendedConcept>> candidateAlignments = new HashMap<Concept, ArrayList<RecommendedConcept>>(); // keeps candidate alignments
+      // select concepts wit similarity above chosen threshold as candidate alignment concepts
+      for (OntClass ontClass1 : concepts1) {
+        ArrayList<RecommendedConcept> similarConcepts = new ArrayList<RecommendedConcept>(); // Similar concepts above a threshold
+        for (OntClass ontClass2 : concepts2) {
+          if (ontClass1 != null && ontClass2 != null) { // test for valid concepts (should have a concept id)
+            Set<String> c1Terms = OntoOps.getLabels(ontClass1);
+            Set<String> c2Terms = OntoOps.getLabels(ontClass2);
+//            double equiv_sim = Math.max(vectorOps.maxWeightedVectorSimilarity(c1Terms, collection1, c2Terms, collection2, editDistCut), vectorOps.maxWeightedHybridSimilarity(c1Terms, collection1, c2Terms, collection2, editDistCut));
+            double sim = vectorOps.maxWeightedVectorSimilarity(c1Terms, collection1, c2Terms, collection2, editDistCut);
+
+            // check if similarity is up to the threshold by string similarity or vector similarity
+            if (sim >= threshold) { // check alignment (low score to preserve concepts below threshold for offsets computation)
+              Concept c2 = new Concept(ontClass2.getURI(), OntoOps.getLabel(ontClass2), targetScheme);
+              similarConcepts.add(new RecommendedConcept(c2, sim, 1)); // keep similarity
+            }
+          } // end if (test of valid concepts)
+
+        } // concept2 loop ends
+
+        if (!similarConcepts.isEmpty()) { // sort and select top n +1 (see within)
+          Collections.sort(similarConcepts, new RecommendedConcept.RecommendedConceptComparator()); // sort in descending order of score
+          int N = maxN < similarConcepts.size() ? maxN : similarConcepts.size(); // top 1
+          similarConcepts = new ArrayList<>(similarConcepts.subList(0, N));
+          Concept c1 = new Concept(ontClass1.getURI(), OntoOps.getLabel(ontClass1), sourceScheme);
+          candidateAlignments.put(c1, similarConcepts);
+        }
+      } // concept1 loop ends
+
+      // Filter
+      for (Map.Entry<Concept, ArrayList<RecommendedConcept>> entry : candidateAlignments.entrySet()) {
+        Concept c1 = entry.getKey();
+        ArrayList<RecommendedConcept> selectedConcepts = entry.getValue();
+
+        for (int i = 0; i < selectedConcepts.size(); i++) {
+          RecommendedConcept c2 = selectedConcepts.get(i);
+          AlignedConcept alignedConcept = new AlignedConcept(c1.getId(), c2.getId(), Relation.Predicate.EXACT_MATCH.value);
+//          if (c2.getScore() >= threshold && !AlignedConcept.containsTheAlignment(seenAlignmentList, alignedConcept)) { // continue if similarity is up to threshold and alignment is not selected already
+//            seenAlignmentList.add(alignedConcept); // add new to list
+          PreAlignedConcept pac = new PreAlignedConcept(alignedConcept, c2.getScore());
+          alignmentsInThreshold = PreAlignedConcept.updateAlignments(alignmentsInThreshold, pac);
+        }
+      }
+
+      // Evaluate
+      alignments = PreAlignedConcept.getAlignments(alignmentsInThreshold);
+//  alignments.add(new AlignedConcept(c1.getId(), c2.getId(), Relation.Predicate.EXACT_MATCH.value));
+      for (AlignedConcept alignedConcept : alignments) {
+        String classLabel = "N";
+        total++;
+        if (Evaluator.trueAlignment(groundTruth, alignedConcept)) { // check if present in the reference alignment
+          correctFound++;
+          classLabel = "Y";
+        }
+//            out.add(c1.getLabel() + " vs " + c2.getLabel() + " = " + c2.getScore() + " => " + classLabel);
+      } // end if unseen alignment and above similarity threshold
+
+      found.add(total);
+      correct.add(correctFound);
+      expected.add(alignTrainTest.expectedClassCount);
+    }
+    // summary
+//    out.forEach(System.out::println);
+//    System.out.println("Correct => " + correct);
+//    System.out.println("Total => " + total);
+
+    double precision = HarmonicPR.hPrecision(correct, found);
+    double recall = HarmonicPR.hRecall(correct, expected);
+    double f1 = 2 * precision * recall / (precision + recall);
+
+    System.out.println();
+
+    System.out.println("===");
+
+    System.out.println("H(p) = " + precision + " H(r) = " + recall + " H(fm) = " + f1 + " , threshold = " + threshold + " , edit_cut = " + editDistCut);
+
+    return precision + "," + recall + "," + f1 + "," + threshold + "," + editDistCut;
 //    return alignments;
   }
 
@@ -170,16 +294,21 @@ alignments.add(new AlignedConcept(c1.getId(), c2.getId(), Relation.Predicate.EXA
     Benchmark_WHYS whys = new Benchmark_WHYS(vectorOps);
     try {
 //      generateFeatures(0.5, 1);
-
+//      whys.weightedHybridSimilarity(0.89, 2, 0.85);
+      whys.weightedVectorAddition(0.89, 2, 0.85);
+/*
       Collection results = new ArrayList<>();
       results.add("precision,recall,f-measure,threshold,edit_dist_cut");
-      for (double threshold = 0.7; threshold <= 1.; threshold+=0.01) {
-        for (double editDistCut = 0.7; editDistCut <= 1.0; editDistCut+=0.01) {
+      for (double threshold = 0.7; threshold <= 1.; threshold += 0.01) {
+        for (double editDistCut = 0.7; editDistCut <= 1.0; editDistCut += 0.01) {
           results.add(whys.weightedHybridSimilarity(threshold, 1, editDistCut));
         }
       }
       System.out.println("");
       results.forEach(System.out::println);
+      // write to csv
+      FileOps.printResults(results, "benc_para_grid.csv");
+*/
 //      weightedHybridSimilarity((t + 0.05), 1, 0.8);
     } catch (AlignmentException ex) {
       Logger.getLogger(Benchmark_WHYS.class.getName()).log(Level.SEVERE, null, ex);

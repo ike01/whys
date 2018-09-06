@@ -5,6 +5,9 @@ import info.debatty.java.stringsimilarity.Cosine;
 import info.debatty.java.stringsimilarity.JaroWinkler;
 import info.debatty.java.stringsimilarity.MetricLCS;
 import info.debatty.java.stringsimilarity.NormalizedLevenshtein;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.UnsupportedEncodingException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,6 +21,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import static java.util.stream.Collectors.joining;
@@ -67,6 +71,7 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.joining;
+import org.deeplearning4j.models.embeddings.wordvectors.WordVectors;
 
 /**
  *
@@ -74,7 +79,7 @@ import static java.util.stream.Collectors.joining;
  */
 public class VectorOps {
 
-  private static final Logger LOG = Logger.getLogger(Word2Vec.class.getName());
+  private static final Logger LOG = Logger.getLogger(VectorOps.class.getName());
   static String vectorModelPath = "C:/dev/rgu/word2vec/models/GoogleNews-vectors-negative300.bin.gz";
 //  static String vectorModelPath = "/program-data/DGXWord2Vec/data/model/GoogleNews-vectors-negative300.bin.gz";
 //  static String vectorModelPath = "/program-data/DGXWord2Vec/data/model/wikipedia_plain_model300_min10_iter5_custom_token.txt";
@@ -82,6 +87,7 @@ public class VectorOps {
 //  static String vectorModelPath = "C:/dev/rgu/word2vec/models/geo_hascontext1_model.txt";
 
   static Word2Vec vec;
+  static WordVectors wvec;
   WordNetOps wordNetOps;
 
   public VectorOps() {
@@ -101,6 +107,18 @@ public class VectorOps {
     System.out.println("Changing model to: " + modelFilePath + " ...");
     vec = WordVectorSerializer.readWord2VecModel(Paths.get(modelFilePath).toAbsolutePath().toString());
     System.out.println("Vocabulary size: " + vec.getVocab().numWords());
+  }
+
+  public void loadWordVectors(String path) {
+    try {
+      System.out.println("Loading model to: " + path + " ...");
+      wvec = WordVectorSerializer.loadTxtVectors(new File(path));
+
+    } catch (FileNotFoundException ex) {
+      Logger.getLogger(VectorOps.class.getName()).log(Level.SEVERE, null, ex);
+    } catch (UnsupportedEncodingException ex) {
+      Logger.getLogger(VectorOps.class.getName()).log(Level.SEVERE, null, ex);
+    }
   }
 
   /**
@@ -268,6 +286,22 @@ public class VectorOps {
 
     if (vec.hasWord(word1) && vec.hasWord(word2)) {
       lst = vec.similarity(word1, word2);
+    }
+//    System.out.println("Similarity betweeen " + word1 + " and " + word2 + ": " + lst);
+
+    return lst;
+  }
+
+  public double gloveSimilarity(String word1, String word2) {
+    double lst = 0.0;
+//    String filePath = Paths.get(MODEL).toAbsolutePath().toString();
+//    Word2Vec vec = WordVectorSerializer.readWord2VecModel(filePath);
+//    LOG.info("Cosine Similarity:");
+    word1 = prepareStringUnderscores(word1); // strip parenthesis and convert to expected form
+    word2 = prepareStringUnderscores(word2); // strip parenthesis and convert to expected form
+
+    if (wvec.hasWord(word1) && wvec.hasWord(word2)) {
+      lst = wvec.similarity(word1, word2);
     }
 //    System.out.println("Similarity betweeen " + word1 + " and " + word2 + ": " + lst);
 
@@ -541,6 +575,7 @@ public class VectorOps {
 //        } else {
           // compute different similarities
           double vecSim = similarity(s1, s2); // range: 1 to -1
+//          double vecSim = gloveSimilarity(s1, s2);
 //          vecSim = ((vecSim + 1) * newRange) / oldRange; //change to (1,0) interval | (((OldValue - OldMin) * NewRange) / OldRange) + NewMin
           double strSim = nl.similarity(s1.trim(), s2.trim());
 //          double strSim = jw.similarity(s1.trim(), s2.trim());
@@ -1280,7 +1315,9 @@ public class VectorOps {
             ));
   }
 
-  public static void main(String[] arg) {
+  public static void main(String[] arg) throws Exception {
+//    WordVectors wordVectors = WordVectorSerializer.loadTxtVectors(new File("glove.6B.50d.txt"));
+
     VectorOps vectorOps = new VectorOps("data/geo_hascontext1_model.txt");
     System.out.println("the stone vs rock : " + vectorOps.hybridSimilarity("stone", "rock"));
 //    vectorOps.hasVector("museum");
